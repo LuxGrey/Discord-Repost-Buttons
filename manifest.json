@@ -6,13 +6,24 @@
   "icons": {
     "64": "icons/icon.png"
   },
+  "permissions": [
+    "storage",
+    "https://*/"
+  ],
+  "background": {
+    "scripts": [
+      "background.js"
+    ],
+    "persistent": false,
+    "type": "module"
+  },
   "content_scripts": [
     {
       "matches": [
-        "*://www.reddit.com/*"
+        "https://www.reddit.com/*"
       ],
       "js": [
-        "content_script.js"
+        "reddit.js"
       ]
     }
   ]

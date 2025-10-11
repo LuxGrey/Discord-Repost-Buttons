@@ -4,7 +4,7 @@ function addButtonToPosts() {
   const posts = document.querySelectorAll('shreddit-post');
 
   posts.forEach(post => {
-    const actionRow = post.shadowRoot.querySelector('div[data-testid="action-row"]');
+    const actionRow = post?.shadowRoot?.querySelector('div[data-testid="action-row"]');
     if (!actionRow) {
       return;
     }

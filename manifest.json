@@ -2,6 +2,7 @@
   "manifest_version": 2,
   "name": "Discord Repost Buttons",
   "description": "Adds buttons to select websites that allow sharing media in configured Discord servers",
+  "homepage_url": "https://github.com/LuxGrey/Discord-Repost-Browser-Extension",
   "version": "0.0.1",
   "icons": {
     "64": "icons/icon.png"
@@ -16,6 +17,11 @@
     ],
     "persistent": false,
     "type": "module"
+  },
+  "applications": {
+    "gecko": {
+      "id": "discord-repost-buttons@lux-grey.github.com"
+    }
   },
   "content_scripts": [
     {

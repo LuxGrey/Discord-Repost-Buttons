@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en-US">
+
+<head>
+  <meta charset="utf-8" />
+  <link rel="stylesheet" href="settings.css" />
+</head>
+
+<body>
+  <div class="form-group">
+    <label>URL for reddit API endpoint of repost server</label>
+    <input type="text" id="repostServerRedditUrl" placeholder="https://example.com/api" />
+  </div>
+
+  <div class="form-group">
+    <label>Authorization token for the API</label>
+    <div class="auth-token-container">
+      <input type="password" class="inline" id="authToken" />
+      <button type="button" id="toggleAuthTokenVisibility" aria-label="Show password">👁️</button>
+    </div>
+  </div>
+
+  <button id="save">Save</button>
+  <span id="saveMessage" role="status" aria-live="polite" class="hidden"></span>
+  <script src="settings.js"></script>
+</body>
+
+</html>

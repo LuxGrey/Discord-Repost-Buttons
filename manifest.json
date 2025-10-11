@@ -32,5 +32,10 @@
         "reddit.js"
       ]
     }
-  ]
+  ],
+  "browser_action": {
+    "default_icon": "icons/icon.png",
+    "default_title": "Discord Repost Buttons",
+    "default_popup": "popup/settings.html"
+  }
 }

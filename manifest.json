@@ -5,7 +5,8 @@
   "homepage_url": "https://github.com/LuxGrey/Discord-Repost-Buttons",
   "version": "0.0.1",
   "icons": {
-    "64": "icons/icon.png"
+    "32": "icons/icon_32.png",
+    "64": "icons/icon_64.png"
   },
   "permissions": [
     "storage"
@@ -32,7 +33,7 @@
     }
   ],
   "action": {
-    "default_icon": "icons/icon.png",
+    "default_icon": "icons/icon_64.png",
     "default_title": "Discord Repost Buttons",
     "default_popup": "popup/settings.html"
   }

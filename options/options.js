@@ -9,7 +9,7 @@ toggleButton.addEventListener('click', () => {
     const isPassword = authTokenInput.type === 'password';
     authTokenInput.type = isPassword ? 'text' : 'password';
     toggleButton.textContent = isPassword ? '🙈' : '👁️';
-    toggleButton.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
+    toggleButton.setAttribute('aria-label', isPassword ? 'Hide token' : 'Show token');
 });
 
 saveButton.addEventListener('click', () => {
@@ -25,7 +25,7 @@ saveButton.addEventListener('click', () => {
     });
 });
 
-// load stored values
+// load stored values into form
 browser.storage.sync.get(['repostServerRedditUrl', 'authToken']).then((result) => {
     if (result.repostServerRedditUrl) {
         repostServerRedditUrlInput.value = result.repostServerRedditUrl;

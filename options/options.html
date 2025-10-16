@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="en-US">
+<html lang="en">
 
 <head>
   <meta charset="utf-8" />
-  <link rel="stylesheet" href="settings.css" />
+  <meta name="color-scheme" content="dark light" />
+  <link rel="stylesheet" href="options.css" />
 </head>
 
 <body>
@@ -14,15 +15,15 @@
 
   <div class="form-group">
     <label>Authorization token for the API</label>
-    <div class="auth-token-container">
+    <div>
       <input type="password" class="inline" id="authToken" />
-      <button type="button" id="toggleAuthTokenVisibility" aria-label="Show password">👁️</button>
+      <button type="button" id="toggleAuthTokenVisibility" aria-label="Show token">👁️</button>
     </div>
   </div>
 
   <button id="save">Save</button>
   <span id="saveMessage" role="status" aria-live="polite" class="hidden"></span>
-  <script src="settings.js"></script>
+  <script src="options.js"></script>
 </body>
 
 </html>

@@ -1,0 +1,35 @@
+body {
+    padding: 1rem;
+    font-size: 14px;
+    font-family: 'Open Sans', sans-serif;
+}
+
+label,
+input {
+    display: block;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.inline {
+    display: inline;
+}
+
+#repostServerRedditUrl,
+#authToken {
+    width: 20rem;
+}
+
+#saveMessage {
+    color: green;
+    transition: opacity 0.3s;
+    margin-left: 1rem;
+}
+
+.hidden {
+    opacity: 0;
+    height: 0;
+    overflow: hidden;
+}

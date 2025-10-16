@@ -38,6 +38,7 @@
       "32": "icons/icon_32.png"
     },
     "default_title": "Discord Repost Buttons",
-    "default_popup": "popup/settings.html"
-  }
+    "default_popup": "popup/popup.html"
+  },
+  "options_page": "options/options.html"
 }

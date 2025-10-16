@@ -13,7 +13,7 @@
   ],
   "background": {
     "scripts": [
-      "background.js"
+      "background_scripts/background.js"
     ],
     "type": "module"
   },
@@ -28,7 +28,7 @@
         "https://www.reddit.com/*"
       ],
       "js": [
-        "reddit.js"
+        "content_scripts/reddit.js"
       ]
     }
   ],

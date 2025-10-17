@@ -15,24 +15,30 @@ function addButtonToPosts() {
     }
 
     // get share button for style imitation
-    const shareButton = actionRow
-      .querySelector('shreddit-post-share-button')
+    const shareButtonContainer = actionRow.querySelector('slot[name="share-button"]')
+    const shareButton = shareButtonContainer
+      ?.querySelector('shreddit-post-share-button')
       ?.shadowRoot
       ?.querySelector('button');
     if (!shareButton) {
       return;
     }
 
-    // create the custom button
-    const discordShareButton = document.createElement('button');
-    // copy Reddit styling of share button
+    // create the repost button
+    const discordRepostButton = document.createElement('button');
+    // copy reddit's styling from share button
     // also add class for identifying buttons that have already been placed by the script
-    discordShareButton.className = shareButton.className + ' ' + DISCORD_SHARE_BUTTON_CLASS;
-    discordShareButton.setAttribute('type', 'button');
-    discordShareButton.textContent = 'Discord';
-    discordShareButton.style.marginLeft = '4px';
+    discordRepostButton.className = shareButton.className + ' ' + DISCORD_SHARE_BUTTON_CLASS;
+    discordRepostButton.setAttribute('type', 'button');
+    discordRepostButton.setAttribute('title', 'Repost on Discord');
+    // use extension icon as button label
+    const iconUrl = browser.runtime.getURL('icons/icon_16.png');
+    const iconImage = document.createElement('img');
+    iconImage.setAttribute('src', iconUrl);
+    iconImage.setAttribute('alt', 'Discord');
+    discordRepostButton.appendChild(iconImage);
 
-    discordShareButton.onclick = async () => {
+    discordRepostButton.onclick = async () => {
       // grab URL for post
       const postLink = post.querySelector('a[slot="full-post-link"]')
         || post.querySelector('a[slot="title"]');
@@ -55,8 +61,8 @@ function addButtonToPosts() {
       });
     };
 
-    // insert Discord share button at the end of the action row
-    actionRow.appendChild(discordShareButton);
+    // insert the Discord repost button directly after the share button
+    shareButtonContainer.insertAdjacentElement('afterend', discordRepostButton);
   });
 }
 

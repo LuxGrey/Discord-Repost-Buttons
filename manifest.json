@@ -40,5 +40,15 @@
     "default_title": "Discord Repost Buttons",
     "default_popup": "popup/popup.html"
   },
-  "options_page": "options/options.html"
+  "options_page": "options/options.html",
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "icons/*.png"
+      ],
+      "matches": [
+        "https://www.reddit.com/*"
+      ]
+    }
+  ]
 }

@@ -114,7 +114,9 @@ function addButtonsToSinglePost(mutationRecords, mutationObserver) {
   }
 
   // create the repost button
-  const repostButton = createRepostButton();
+  const repostButtonContainer = createRepostButton();
+  // get actual button element
+  const repostButton = repostButtonContainer.querySelector('button');
   // add reddit's styling from share button
   repostButton.className += ' ' + shareButton.className;
   repostButton.style.cssText = shareButton.style.cssText;
@@ -122,11 +124,11 @@ function addButtonsToSinglePost(mutationRecords, mutationObserver) {
   repostButton.onclick = async () => {
     // since the active tab shows a single post, the current location is the post's URL
     const postUrl = window.location.href;
-    sendRepostMessageToBackground(postUrl);
+    handleRepostButtonClick(postUrl, repostButtonContainer);
   };
 
   // insert the repost button directly after the share button
-  shareButtonContainer.insertAdjacentElement('afterend', repostButton);
+  shareButtonContainer.insertAdjacentElement('afterend', repostButtonContainer);
   // now that all buttons have been added, this function does not need to re-run,
   // meaning that the mutation observer can be disconnected
   mutationObserver?.disconnect();
@@ -169,7 +171,9 @@ function addButtonsToPostsList() {
     }
 
     // create the repost button
-    const repostButton = createRepostButton();
+    const repostButtonContainer = createRepostButton();
+    // get actual button element
+    const repostButton = repostButtonContainer.querySelector('button');
     // add reddit's styling from share button
     repostButton.className += ' ' + shareButton.className;
     // register onclick-function
@@ -186,11 +190,11 @@ function addButtonsToPostsList() {
       // build full URL to post
       const fullPostUrl = new URL(postLink.href, window.location.origin).href;
 
-      sendRepostMessageToBackground(fullPostUrl);
+      handleRepostButtonClick(fullPostUrl, repostButtonContainer);
     };
 
     // insert the repost button directly after the share button
-    shareButtonContainer.insertAdjacentElement('afterend', repostButton);
+    shareButtonContainer.insertAdjacentElement('afterend', repostButtonContainer);
   });
 }
 
@@ -213,6 +217,13 @@ function getRepostButtonTemplate() {
   if (!this.repostButtonTemplate) {
     // template has to be created
 
+    // create container
+    const repostButtonContainer = document.createElement('div');
+    // define position as relative for correct positioning of toast
+    repostButtonContainer.style.cssText = `
+      position: relative;
+    `;
+
     // create the repost button
     const repostButton = document.createElement('button');
     // add class for identifying buttons that have already been placed by the script
@@ -225,27 +236,73 @@ function getRepostButtonTemplate() {
     const iconImage = document.createElement('img');
     iconImage.setAttribute('src', iconUrl);
     iconImage.setAttribute('alt', 'Discord');
-    repostButton.appendChild(iconImage);
 
-    this.repostButtonTemplate = repostButton;
+    repostButton.appendChild(iconImage);
+    repostButtonContainer.appendChild(repostButton);
+
+    this.repostButtonTemplate = repostButtonContainer;
   }
 
   return this.repostButtonTemplate;
 }
 
 /**
- * Signals to the background script that a reddit post should be reposted in Discord
+ * Prompts the background script to repost the provided post URL and displays the success or failure of that
+ * prompt as a toast.
  * 
  * @param {string} postUrl the URL of the reddit post that should be reposted
+ * @param {Node} repostButtonContainer the repost button that the toast should be displayed next to
  */
-function sendRepostMessageToBackground(postUrl) {
+function handleRepostButtonClick(postUrl, repostButtonContainer) {
   const sending = browser.runtime.sendMessage({
     action: 'repost_reddit',
     params: {
       postUrl: postUrl,
     }
   });
-  sending.then((message) => {
-    console.log(`Success: ${message.success}`);
+
+  sending.then((result) => {
+    displayRepostToast(result.success, repostButtonContainer);
   });
+}
+
+/**
+ * Displays a temporary toast above the provided anchorElement that informs of success or failure, depending on
+ * the value of success.
+ * 
+ * @param {boolean} success indicate if a positive success toast or a negative failure post should be displayed
+ * @param {Node} container defines the element that the toast should be displayed relative to
+ */
+function displayRepostToast(success, container) {
+  const toast = document.createElement('div');
+  toast.textContent = success ? 'Reposted' : 'Failed to repost';
+
+  // since the toast is usually located inside a shadow root, it cannot be easily styled with global CSS rules
+  // from a CSS file; instead directly set the style attribute on the toast, as it will be the only element
+  // with custom styles within a shadow root anyway
+  toast.style.cssText = `
+    position: absolute;
+    bottom: 2.1rem;
+    padding: 0.5rem;
+    white-space: nowrap;
+    border-radius: 0.5rem;
+    background-color: ${success ? 'green' : 'red'};
+    color: white;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  `;
+
+  // insert toast into container
+  container.appendChild(toast);
+
+  // fade in
+  requestAnimationFrame(() => {
+    toast.style.opacity = '1';
+  });
+
+  // remove toast after 2 seconds
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.addEventListener('transitionend', () => toast.remove(), { once: true })
+  }, 2000);
 }

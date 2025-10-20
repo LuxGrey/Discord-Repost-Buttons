@@ -1,17 +1,36 @@
 import { sendServerRequest } from './repost.js';
 
 /**
+ * Executes logic for reposting a reddit post and returns a response object that informs of whether
+ * reposting was successful.
+ * 
+ * @param {object} messageParams message parameters received from the content script
+ * @return {Promise<{success: boolean}>} an object that contains info about the success of the repost
+ */
+export async function handleRedditMessage(messageParams) {
+    let success;
+
+    try {
+        success = await repostReddit(messageParams);
+    } catch (error) {
+        success = false;
+    }
+
+    return { success };
+}
+
+/**
  * Sends a request to the configured API endpoint for reposting reddit posts,
  * prompting the service to repost the specified post on a Discord server
  * 
- * @param {Object} params
- * @returns {void}
+ * @param {object} params parameters regarding the content that should be reposted
+ * @returns {Promise<boolean>} true if the repost succeeded, otherwise false
  */
-export async function repostReddit(params) {
+async function repostReddit(params) {
     const postUrl = params.postUrl;
     if (!postUrl) {
         console.error('repost_reddit: no postUrl provided');
-        return;
+        return false;
     }
 
     let embedUrls;
@@ -19,7 +38,7 @@ export async function repostReddit(params) {
         embedUrls = await getEmbedUrls(postUrl);
     } catch (error) {
         console.error('Error while fetching JSON data of reddit post: ', error);
-        return;
+        return false;
     }
 
     // load and validate required parameters from user settings
@@ -28,16 +47,12 @@ export async function repostReddit(params) {
         settings = await getSettings();
     } catch (error) {
         console.error('Error while loading settings: ', error);
-        return;
+        return false;
     }
 
     if (!settings.repostServerRedditUrl) {
-        console.warn('Settings are missing repost server reddit URL');
-        return;
-    }
-    if (!settings.authToken) {
-        console.warn('Settings are missing auth token');
-        return;
+        console.error('Settings are missing repost server reddit URL');
+        return false;
     }
 
     // build request body
@@ -55,7 +70,10 @@ export async function repostReddit(params) {
         console.log('Successfully reposted reddit post ' + postUrl);
     } catch (error) {
         console.error('Error while trying to repost reddit post: ', error);
+        return false;
     }
+
+    return true;
 }
 
 /**

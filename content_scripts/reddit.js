@@ -239,10 +239,13 @@ function getRepostButtonTemplate() {
  * @param {string} postUrl the URL of the reddit post that should be reposted
  */
 function sendRepostMessageToBackground(postUrl) {
-  browser.runtime.sendMessage({
+  const sending = browser.runtime.sendMessage({
     action: 'repost_reddit',
     params: {
       postUrl: postUrl,
     }
+  });
+  sending.then((message) => {
+    console.log(`Success: ${message.success}`);
   });
 }

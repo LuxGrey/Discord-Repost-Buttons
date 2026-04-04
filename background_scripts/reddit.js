@@ -125,13 +125,23 @@ async function getEmbedUrls(postUrl) {
  * @return {string[]}
  */
 function getGalleryEmbedUrls(postData) {
+    // maps media ID to preview URL
+    const mediaUrlMap = new Map();
+
     // iterate over the gallery element data in media_metadata and extract one URL from each
-    return Object.values(postData.media_metadata).map((galleryElement) => {
+    Object.values(postData.media_metadata).forEach((mediaItem) => {
         // extract the preview URL
         // it is assumed to have the format 'https://preview.redd.it/<id>.<fileExtension>?<queryParameters>'
-        const previewUrl = galleryElement.p[0].u;
+        const previewUrl = mediaItem.p[0].u;
         // transform the preview URL so that it is suitable for embedding in Discord
         // do this by removing the query parameters and changing the domain to 'i.redd.it'
-        return previewUrl.substring(0, previewUrl.indexOf('?')).replace('preview', 'i');
+        const adjustedUrl = previewUrl.substring(0, previewUrl.indexOf('?')).replace('preview', 'i');
+
+        mediaUrlMap.set(mediaItem.id, adjustedUrl);
+    });
+
+    // use media IDs in gallery_data to get gallery elements in correct order
+    return Object.values(postData.gallery_data.items).map((galleryItem) => {
+        return mediaUrlMap.get(galleryItem.media_id);
     });
 }

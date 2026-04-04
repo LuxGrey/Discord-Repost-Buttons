@@ -1,3 +1,4 @@
 .vscode
 # web-ext build output
 web-ext-artifacts
+.amo-upload-uuid

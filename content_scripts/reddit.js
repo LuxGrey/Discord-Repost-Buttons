@@ -232,10 +232,14 @@ function getRepostButtonTemplate() {
     repostButton.setAttribute('title', 'Repost on Discord');
 
     // use extension icon as button label
-    const iconUrl = browser.runtime.getURL('icons/icon_16.png');
+    const iconUrl = browser.runtime.getURL('images/icon.svg');
     const iconImage = document.createElement('img');
     iconImage.setAttribute('src', iconUrl);
     iconImage.setAttribute('alt', 'Discord');
+    iconImage.style.cssText = `
+      height: 16px;
+      width: 16px;
+    `;
 
     repostButton.appendChild(iconImage);
     repostButtonContainer.appendChild(repostButton);
@@ -278,8 +282,7 @@ function displayRepostToast(success, container) {
   toast.textContent = success ? 'Reposted' : 'Failed to repost';
 
   // since the toast is usually located inside a shadow root, it cannot be easily styled with global CSS rules
-  // from a CSS file; instead directly set the style attribute on the toast, as it will be the only element
-  // with custom styles within a shadow root anyway
+  // from a CSS file; instead directly set the style attribute on the toast
   toast.style.cssText = `
     position: absolute;
     bottom: 2.1rem;

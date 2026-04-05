@@ -100,7 +100,9 @@ async function getEmbedUrls(postUrl) {
     const json = await response.json();
 
     // grab relevant data from JSON post data
-    const postData = json[0].data.children[0].data;
+    let postData = json[0].data.children[0].data;
+    // if post is a cross-post, use data of parent post
+    postData = postData.crosspost_parent_list?.[0] || postData;
 
     if (postData.is_gallery) {
         // post is a gallery post

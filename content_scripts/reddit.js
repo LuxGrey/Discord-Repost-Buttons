@@ -1,14 +1,6 @@
 const DISCORD_SHARE_BUTTON_CLASS = 'discord-share-button';
 
 /**
- * Stores last location that the scripts has run for,
- * used to track location changes
- * 
- * @type {string}
- */
-let lastLocationUrl;
-
-/**
  * Used to unregister event listeners after a location change
  * 
  * @type {AbortController}
@@ -29,64 +21,73 @@ init();
 // ==============================
 
 /**
- * Initialize the persistent content script and ensure the logic for adding repost buttons is re-run from the start
- * every time the window location changes
+ * Initialize the persistent content script and ensure the logic for injecting repost buttons is re-run from the start
+ * every time a new page has been navigated to
  */
 function init() {
-  // store initial location URL
-  lastLocationUrl = window.location.href;
   abortController = new AbortController();
 
-  // run code to add repost buttons every time a location change is detected,
-  // which is done by comparing the current location to the last known value whenever the body mutates
-  const observer = new MutationObserver(() => {
-    if (lastLocationUrl !== window.location.href) {
-      // update last location and add buttons
-      lastLocationUrl = window.location.href;
-      addButtons();
-    }
+  // run code to add repost buttons every time a navigation succeeded
+  navigation.addEventListener('navigatesuccess', () => {
+    injectForPage();
   });
-  observer.observe(document.body, { childList: true, subtree: true });
 
-  // explicitly run addButtons for initial location
-  addButtons();
+  // explicitly run element injection code for initial location
+  injectForPage();
 }
 
 /**
- * This function should be called once after a new location has been navigated to, in order to start adding
- * repost buttons to all posts in the current view
+ * This function determines which kind of page is currently active and kicks of the appropriate injection logic
+ * Should be called when a new page has been navigated to
  */
-function addButtons() {
+function injectForPage() {
   // unregister all event listeners and observers from previous function call and create fresh AbortController instance
   abortController.abort();
   abortController = new AbortController();
 
   const posts = document.querySelectorAll('shreddit-post');
 
+  // determine which kind of page is active and run appropriate injection logic
   if (posts.length === 1) {
-    // active view shows a single post
-    addButtonsToSinglePost();
-
-    // use MutationObserver to ensure that script keeps trying to add buttons when body mutates,
-    // as the DOM nodes that the logic depends on may take a moment to appear
-    const observer = new MutationObserver(addButtonsToSinglePost);
-    observer.observe(document.body, { childList: true, subtree: true });
-
-    // ensure that once location is changed and the MutationObserver instance becomes obsolete, it is disconnected
-    abortController.signal.addEventListener('abort', () => observer.disconnect(), { once: true })
+    // active page shows a single post
+    initInjectionForSinglePost();
   } else if (posts.length > 1) {
-    // active view shows multiple posts
-    addButtonsToPostsList();
-
-    // use MutationObserver so that buttons keep being added to new posts that are loaded in as the user scrolls
-    const observer = new MutationObserver(addButtonsToPostsList);
-    observer.observe(document.body, { childList: true, subtree: true });
-
-    // ensure that once location is changed and the MutationObserver instance becomes obsolete, it is disconnected
-    abortController.signal.addEventListener('abort', () => observer.disconnect(), { once: true })
+    // active page shows multiple posts
+    initInjectionForPostsList();
   } else {
     console.log('No posts found on page');
   }
+}
+
+/**
+ * Initializes logic for trying to add repost buttons to a single post, which is reattempted every time
+ * the DOM mutates, until the injection succeeded.
+ */
+function initInjectionForSinglePost() {
+  addButtonsToSinglePost();
+
+  // use MutationObserver to ensure that script keeps trying to add buttons when body mutates,
+  // as the DOM nodes that the logic depends on may take a moment to appear
+  const observer = new MutationObserver(addButtonsToSinglePost);
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  // ensure that once location is changed and the MutationObserver instance becomes obsolete, it is disconnected
+  abortController.signal.addEventListener('abort', () => observer.disconnect(), { once: true })
+}
+
+/**
+ * Initializes logic for trying to add repost buttons to posts in a list, which is repeated every time
+ * additional posts are suspected to have been loaded.
+ */
+function initInjectionForPostsList() {
+  addButtonsToPostsList();
+
+  // use MutationObserver so that buttons keep being added to new posts that are loaded in as the user scrolls
+  const observer = new MutationObserver(addButtonsToPostsList);
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  // ensure that once location is changed and the MutationObserver instance becomes obsolete, it is disconnected
+  abortController.signal.addEventListener('abort', () => observer.disconnect(), { once: true })
 }
 
 /**
@@ -103,6 +104,12 @@ function addButtonsToSinglePost(mutationRecords, mutationObserver) {
   const shareButtonContainer = post.shadowRoot?.querySelector('slot[name="share-button"]');
   if (!shareButtonContainer) {
     console.error('Could not find share button container for post');
+    return;
+  }
+
+  // do not add a button and unregister mutation observer if a button already exists
+  if (post.shadowRoot?.querySelector(`.${DISCORD_SHARE_BUTTON_CLASS}`)) {
+    mutationObserver?.disconnect();
     return;
   }
 

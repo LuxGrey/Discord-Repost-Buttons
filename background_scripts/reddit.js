@@ -33,13 +33,15 @@ async function repostReddit(params) {
         return false;
     }
 
-    let embedUrls;
+    let postData;
     try {
-        embedUrls = await getEmbedUrls(postUrl);
+        postData = await getPostData(postUrl);
     } catch (error) {
         console.error('Error while fetching JSON data of reddit post: ', error);
         return false;
     }
+
+    const embedUrls = await getEmbedUrls(postData);
 
     // load and validate required parameters from user settings
     let settings;
@@ -58,6 +60,7 @@ async function repostReddit(params) {
     // build request body
     const requestBody = {
         postUrl: postUrl,
+        postTitle: postData.title,
     };
 
     if (embedUrls?.length) {
@@ -87,26 +90,47 @@ async function getSettings() {
 }
 
 /**
- * Determines a list of additional embed URLs for the provided reddit post if the post URL alone is expected
- * to produce no viable embed in Discord
+ * Fetches the JSON data for the given reddit post URL.
+ * Returns only a relevant section of the JSON data.
  * 
  * @param {string} postUrl the URL of a reddit post
- * @returns {Promise<string[]|null>} the external URL of an embed used in the reddit post or null
+ * @returns {Promise<Object>} the post data
  */
-async function getEmbedUrls(postUrl) {
+async function getPostData(postUrl) {
     // fetch JSON data for reddit post
     const postJsonUrl = postUrl.slice(0, postUrl.length - 1) + '.json';
     const response = await fetch(postJsonUrl);
     const json = await response.json();
 
-    // grab relevant data from JSON post data
-    let postData = json[0].data.children[0].data;
+    // grab relevant section from JSON post data
+    return json[0].data.children[0].data;
+}
+
+/**
+ * Determines a list of embed URLs for the provided reddit post
+ * 
+ * @param {Object} postData the relevant data of a reddit post that the embed URLs should be extracted from
+ * @returns {Promise<string[]|null>} a list of URLs that produce embeds for the media of the reddit post or null
+ */
+async function getEmbedUrls(postData) {
     // if post is a cross-post, use data of parent post
     postData = postData.crosspost_parent_list?.[0] || postData;
+
+    if (postData.post_hint === 'image') {
+        // post is a single image post
+        return [postData.url];
+    }
 
     if (postData.is_gallery) {
         // post is a gallery post
         return getGalleryEmbedUrls(postData);
+    }
+
+    if (postData.is_video) {
+        // post is a video post
+        const videoUrl = postData.media.reddit_video.fallback_url
+            || postData.secure_media.reddit_video.fallback_url;
+        return [videoUrl];
     }
 
     const oembed = postData.media?.oembed || postData.secure_media?.oembed;

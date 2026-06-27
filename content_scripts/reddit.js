@@ -281,6 +281,9 @@ function createClipboardButton() {
     clipboardButton.setAttribute('type', 'button');
     clipboardButton.setAttribute('title', 'Copy repost message text to clipboard');
     clipboardButton.textContent = '📋';
+    clipboardButton.style.cssText = `
+      transition: background-color 0.3s ease;
+    `;
 
     this.clipboardButtonTemplate = clipboardButton;
   }
@@ -300,6 +303,9 @@ function createRepostButton() {
     const repostButton = document.createElement('button');
     repostButton.setAttribute('type', 'button');
     repostButton.setAttribute('title', 'Repost on Discord');
+    repostButton.style.cssText = `
+      transition: background-color 0.3s ease;
+    `;
 
     // use extension icon as button label
     const iconUrl = browser.runtime.getURL('images/icon.svg');
@@ -335,9 +341,8 @@ function handleClipboardButtonClick(postUrl, clipboardButton) {
   });
 
   sending.then((result) => {
-    displayToast(
+    displayButtonFeedback(
       result.success,
-      result.success ? 'Copied' : 'Failed to copy',
       clipboardButton
     );
   });
@@ -359,9 +364,8 @@ function handleRepostButtonClick(postUrl, repostButton) {
   });
 
   sending.then((result) => {
-    displayToast(
+    displayButtonFeedback(
       result.success,
-      result.success ? 'Reposted' : 'Failed to repost',
       repostButton
     );
   });
@@ -372,38 +376,14 @@ function handleRepostButtonClick(postUrl, repostButton) {
  * the value of success.
  * 
  * @param {boolean} success indicate if a positive success toast or a negative failure post should be displayed
- * @param {string} text the text content of the toast
- * @param {Node} container defines the element that the toast should be displayed relative to
+ * @param {Node} button the button element that the feedback should be displayed on
  */
-function displayToast(success, text, container) {
-  const toast = document.createElement('div');
-  toast.textContent = text;
+function displayButtonFeedback(success, button) {
+  // set the feedback color; it will gently transition due to the inherent transition rule of the button  
+  button.style.backgroundColor = success ? 'green' : 'red';
 
-  // since the toast is usually located inside a shadow root, it cannot be easily styled with global CSS rules
-  // from a CSS file; instead directly set the style attribute on the toast
-  toast.style.cssText = `
-    position: absolute;
-    bottom: 2.1rem;
-    padding: 0.5rem;
-    white-space: nowrap;
-    border-radius: 0.5rem;
-    background-color: ${success ? 'green' : 'red'};
-    color: white;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-  `;
-
-  // insert toast into container
-  container.appendChild(toast);
-
-  // fade in
-  requestAnimationFrame(() => {
-    toast.style.opacity = '1';
-  });
-
-  // remove toast after 2 seconds
+  // remove the temporary color after 4 seconds
   setTimeout(() => {
-    toast.style.opacity = '0';
-    toast.addEventListener('transitionend', () => toast.remove(), { once: true })
-  }, 2000);
+    button.style.removeProperty('background-color');
+  }, 4000);
 }

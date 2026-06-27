@@ -114,7 +114,7 @@ function addButtonsToSinglePost(mutationRecords, mutationObserver) {
   }
 
   // get share button for style imitation
-  const shareButton = post.querySelector('faceplate-dropdown-menu')?.querySelector('button');
+  const shareButton = post.querySelector('.share-dropdown-menu button');
   if (!shareButton) {
     console.error('Could not find share button for post');
     return;

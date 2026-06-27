@@ -1,4 +1,4 @@
-const DISCORD_SHARE_BUTTON_CLASS = 'discord-share-button';
+const BUTTONS_CONTAINER_CLASS = 'drb-buttons-container';
 
 /**
  * Used to unregister event listeners after a location change
@@ -8,9 +8,23 @@ const DISCORD_SHARE_BUTTON_CLASS = 'discord-share-button';
 let abortController;
 
 /**
+ * Cached template for buttons container that can be cloned
+ * 
+ * @type {HTMLDivElement}
+ */
+let buttonsContainerTemplate;
+
+/**
+ * Cached template for clipboard button that can be cloned
+ * 
+ * @type {HTMLButtonElement}
+ */
+let clipboardButtonTemplate;
+
+/**
  * Cached template for repost button that can be cloned
  * 
- * @type {Node}
+ * @type {HTMLButtonElement}
  */
 let repostButtonTemplate;
 
@@ -21,7 +35,7 @@ init();
 // ==============================
 
 /**
- * Initialize the persistent content script and ensure the logic for injecting repost buttons is re-run from the start
+ * Initialize the persistent content script and ensure the logic for injecting buttons is re-run from the start
  * every time a new page has been navigated to
  */
 function init() {
@@ -37,7 +51,7 @@ function init() {
 }
 
 /**
- * This function determines which kind of page is currently active and kicks of the appropriate injection logic
+ * This function determines which kind of page is currently active and kicks off the appropriate injection logic
  * Should be called when a new page has been navigated to
  */
 function injectForPage() {
@@ -60,8 +74,8 @@ function injectForPage() {
 }
 
 /**
- * Initializes logic for trying to add repost buttons to a single post, which is reattempted every time
- * the DOM mutates, until the injection succeeded.
+ * Initializes logic for trying to add buttons to a single post, which is reattempted every time the DOM mutates,
+ * until the injection succeeded
  */
 function initInjectionForSinglePost() {
   addButtonsToSinglePost();
@@ -76,8 +90,8 @@ function initInjectionForSinglePost() {
 }
 
 /**
- * Initializes logic for trying to add repost buttons to posts in a list, which is repeated every time
- * additional posts are suspected to have been loaded.
+ * Initializes logic for trying to add buttons to posts in a list, which is repeated every time
+ * additional posts are suspected to have been loaded
  */
 function initInjectionForPostsList() {
   addButtonsToPostsList();
@@ -99,43 +113,57 @@ function initInjectionForPostsList() {
  */
 function addButtonsToSinglePost(mutationRecords, mutationObserver) {
   const post = document.querySelector('shreddit-post');
+  const postShadowRoot = post.shadowRoot;
 
-  // get share button container for relative positioning of repost button
-  const shareButtonContainer = post.shadowRoot?.querySelector('slot[name="share-button"]');
+  // do not add any buttons and unregister mutation observer if repost buttons already exist
+  if (postShadowRoot?.querySelector(`.${BUTTONS_CONTAINER_CLASS}`)) {
+    mutationObserver?.disconnect();
+    return;
+  }
+
+  // get share button container for relative positioning of repost buttons
+  const shareButtonContainer = postShadowRoot?.querySelector('slot[name="share-button"]');
   if (!shareButtonContainer) {
     console.error('Could not find share button container for post');
     return;
   }
 
-  // do not add a button and unregister mutation observer if a button already exists
-  if (post.shadowRoot?.querySelector(`.${DISCORD_SHARE_BUTTON_CLASS}`)) {
-    mutationObserver?.disconnect();
-    return;
-  }
-
   // get share button for style imitation
-  const shareButton = post.querySelector('faceplate-dropdown-menu')?.querySelector('button');
+  const shareButton = post.querySelector('.share-dropdown-menu button');
   if (!shareButton) {
     console.error('Could not find share button for post');
     return;
   }
 
-  // create the repost button
-  const repostButtonContainer = createRepostButton();
-  // get actual button element
-  const repostButton = repostButtonContainer.querySelector('button');
+  // create buttons container
+  const buttonsContainer = createButtonsContainer();
+  // since the active tab shows a single post, the current location is the post's URL
+  const postUrl = window.location.href;
+
+  // create clipboard button
+  const clipboardButton = createClipboardButton();
+  // add reddit's styling from share button
+  clipboardButton.className += ' ' + shareButton.className;
+  clipboardButton.style.cssText = shareButton.style.cssText;
+  // register onclick-function
+  clipboardButton.onclick = async () => {
+    handleClipboardButtonClick(postUrl, clipboardButton);
+  };
+  buttonsContainer.appendChild(clipboardButton);
+
+  // create repost button
+  const repostButton = createRepostButton();
   // add reddit's styling from share button
   repostButton.className += ' ' + shareButton.className;
   repostButton.style.cssText = shareButton.style.cssText;
   // register onclick-function
   repostButton.onclick = async () => {
-    // since the active tab shows a single post, the current location is the post's URL
-    const postUrl = window.location.href;
-    handleRepostButtonClick(postUrl, repostButtonContainer);
+    handleRepostButtonClick(postUrl, repostButton);
   };
+  buttonsContainer.appendChild(repostButton);
 
-  // insert the repost button directly after the share button
-  shareButtonContainer.insertAdjacentElement('afterend', repostButtonContainer);
+  // insert the buttons container directly after the share button
+  shareButtonContainer.insertAdjacentElement('afterend', buttonsContainer);
   // now that all buttons have been added, this function does not need to re-run,
   // meaning that the mutation observer can be disconnected
   mutationObserver?.disconnect();
@@ -155,8 +183,8 @@ function addButtonsToPostsList() {
       return;
     }
 
-    // avoid duplicating the repost button when iterating over the same post again
-    if (actionRow.querySelector(`.${DISCORD_SHARE_BUTTON_CLASS}`)) {
+    // avoid duplicating buttons when iterating over the same post again
+    if (actionRow.querySelector(`.${BUTTONS_CONTAINER_CLASS}`)) {
       return;
     }
 
@@ -177,64 +205,99 @@ function addButtonsToPostsList() {
       return;
     }
 
+    // create buttons container
+    const buttonsContainer = createButtonsContainer();
+
+    // grab relative URL to post
+    const postLink = post.querySelector('a[slot="full-post-link"]')
+      || post.querySelector('a[slot="title"]');
+
+    if (!postLink) {
+      console.error("Could not find post URL");
+      return;
+    }
+
+    // build full URL to post
+    const fullPostUrl = new URL(postLink.href, window.location.origin).href;
+
+    // create clipboard button
+    const clipboardButton = createClipboardButton();
+    // add reddit's styling from share button
+    clipboardButton.className += ' ' + shareButton.className;
+    // register onclick-function
+    clipboardButton.onclick = async () => {
+      handleClipboardButtonClick(fullPostUrl, clipboardButton);
+    };
+    buttonsContainer.appendChild(clipboardButton);
+
     // create the repost button
-    const repostButtonContainer = createRepostButton();
-    // get actual button element
-    const repostButton = repostButtonContainer.querySelector('button');
+    const repostButton = createRepostButton();
     // add reddit's styling from share button
     repostButton.className += ' ' + shareButton.className;
     // register onclick-function
     repostButton.onclick = async () => {
-      // grab relative URL to post
-      const postLink = post.querySelector('a[slot="full-post-link"]')
-        || post.querySelector('a[slot="title"]');
-
-      if (!postLink) {
-        console.error("Could not find post URL");
-        return;
-      }
-
-      // build full URL to post
-      const fullPostUrl = new URL(postLink.href, window.location.origin).href;
-
-      handleRepostButtonClick(fullPostUrl, repostButtonContainer);
+      handleRepostButtonClick(fullPostUrl, repostButton);
     };
+    buttonsContainer.appendChild(repostButton);
 
     // insert the repost button directly after the share button
-    shareButtonContainer.insertAdjacentElement('afterend', repostButtonContainer);
+    shareButtonContainer.insertAdjacentElement('afterend', buttonsContainer);
   });
+}
+
+/**
+ * Creates a container node that houses all buttons for a single post
+ * 
+ * @return {HTMLDivElement}
+ */
+function createButtonsContainer() {
+  if (!this.buttonsContainerTemplate) {
+    // template has to be created
+
+    const buttonsContainer = document.createElement('div');
+    // add class for identification purposes
+    buttonsContainer.className = BUTTONS_CONTAINER_CLASS;
+    // add styling for container
+    buttonsContainer.style.cssText = `
+      position: relative;
+      display: flex;
+      gap: 0.75rem;
+    `;
+
+    this.buttonsContainerTemplate = buttonsContainer;
+  }
+
+  return this.buttonsContainerTemplate.cloneNode(true);
+}
+
+/**
+ * Creates a new clipboard button instance based on a cached template
+ */
+function createClipboardButton() {
+  if (!this.clipboardButtonTemplate) {
+    // template has to be created
+
+    const clipboardButton = document.createElement('button');
+    clipboardButton.setAttribute('type', 'button');
+    clipboardButton.setAttribute('title', 'Copy repost message text to clipboard');
+    clipboardButton.textContent = '📋';
+
+    this.clipboardButtonTemplate = clipboardButton;
+  }
+
+  return this.clipboardButtonTemplate.cloneNode(true);
 }
 
 /**
  * Creates a new repost button instance based on a cached template
  * 
- * @returns {Node}
+ * @returns {HTMLButtonElement}
  */
 function createRepostButton() {
-  return getRepostButtonTemplate().cloneNode(true);
-}
-
-/**
- * Returns the cached repost button template
- * Creates the template if it has not yet been cached
- * 
- * @returns {Node}
- */
-function getRepostButtonTemplate() {
   if (!this.repostButtonTemplate) {
     // template has to be created
 
-    // create container
-    const repostButtonContainer = document.createElement('div');
-    // define position as relative for correct positioning of toast
-    repostButtonContainer.style.cssText = `
-      position: relative;
-    `;
-
-    // create the repost button
     const repostButton = document.createElement('button');
-    // add class for identifying buttons that have already been placed by the script
-    repostButton.className = DISCORD_SHARE_BUTTON_CLASS;
     repostButton.setAttribute('type', 'button');
     repostButton.setAttribute('title', 'Repost on Discord');
 
@@ -249,22 +312,45 @@ function getRepostButtonTemplate() {
     `;
 
     repostButton.appendChild(iconImage);
-    repostButtonContainer.appendChild(repostButton);
 
-    this.repostButtonTemplate = repostButtonContainer;
+    this.repostButtonTemplate = repostButton;
   }
 
-  return this.repostButtonTemplate;
+  return this.repostButtonTemplate.cloneNode(true);
 }
 
 /**
- * Prompts the background script to repost the provided post URL and displays the success or failure of that
- * prompt as a toast.
+ * Prompts the background script to write repost text that can be pasted in Discord to the user's clipboard
+ * Displays the success or failure of that prompt as a toast next to the button
  * 
  * @param {string} postUrl the URL of the reddit post that should be reposted
- * @param {Node} repostButtonContainer the repost button that the toast should be displayed next to
+ * @param {HTMLButtonElement} clipboardButton the clipboard button that was clicked
  */
-function handleRepostButtonClick(postUrl, repostButtonContainer) {
+function handleClipboardButtonClick(postUrl, clipboardButton) {
+  const sending = browser.runtime.sendMessage({
+    action: 'clipboard_reddit',
+    params: {
+      postUrl: postUrl,
+    }
+  });
+
+  sending.then((result) => {
+    displayToast(
+      result.success,
+      result.success ? 'Copied' : 'Failed to copy',
+      clipboardButton
+    );
+  });
+}
+
+/**
+ * Prompts the background script to repost the provided post URL
+ * Displays the success or failure of that prompt as a toast next to the button
+ * 
+ * @param {string} postUrl the URL of the reddit post that should be reposted
+ * @param {HTMLButtonElement} repostButton the repost button that was clicked
+ */
+function handleRepostButtonClick(postUrl, repostButton) {
   const sending = browser.runtime.sendMessage({
     action: 'repost_reddit',
     params: {
@@ -273,7 +359,11 @@ function handleRepostButtonClick(postUrl, repostButtonContainer) {
   });
 
   sending.then((result) => {
-    displayRepostToast(result.success, repostButtonContainer);
+    displayToast(
+      result.success,
+      result.success ? 'Reposted' : 'Failed to repost',
+      repostButton
+    );
   });
 }
 
@@ -282,11 +372,12 @@ function handleRepostButtonClick(postUrl, repostButtonContainer) {
  * the value of success.
  * 
  * @param {boolean} success indicate if a positive success toast or a negative failure post should be displayed
+ * @param {string} text the text content of the toast
  * @param {Node} container defines the element that the toast should be displayed relative to
  */
-function displayRepostToast(success, container) {
+function displayToast(success, text, container) {
   const toast = document.createElement('div');
-  toast.textContent = success ? 'Reposted' : 'Failed to repost';
+  toast.textContent = text;
 
   // since the toast is usually located inside a shadow root, it cannot be easily styled with global CSS rules
   // from a CSS file; instead directly set the style attribute on the toast

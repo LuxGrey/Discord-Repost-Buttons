@@ -9,7 +9,8 @@
     "64": "images/icon.svg"
   },
   "permissions": [
-    "storage"
+    "storage",
+    "clipboardWrite"
   ],
   "background": {
     "scripts": [
